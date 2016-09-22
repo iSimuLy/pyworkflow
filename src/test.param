@@ -1,0 +1,45 @@
+################################################################################
+# Parameter File - specify this file in the lammps call
+# Simulation Name: Fragmentation of Pristine Crystal
+################################################################################
+
+variable simSize equal 50 # Size of the simulation cell
+variable tStep equal 0.005 # Simulation time step in picoseconds
+variable finalStrain equal 1 # Final strain for simulation
+variable sRate equal 0.01 # Strain rate per picosecond
+variable latA equal 3.61 # Lattice constant in Angstrom
+variable tempInit equal 10.0 # Initial temperature in Kelvin
+variable nvoids equal 0 # Number of initial voids
+variable voidRad equal 0 # Radius used to create voids
+variable simName string "pristine" # String to identify simulation - no spaces (used for filename)
+variable element string "Al"
+
+
+# ############################
+# Default file location
+variable infilepath string "/cavs/users/bradley/Results/Scripts/"
+
+# Restart file setup - specify the variable "restart" on the command line
+# 0 - Run full setup
+# 1 - Read mid-progress restart file
+# 2 - Read equilibrated file
+if "${restart} > 0" then "print JUMPING" "jump SELF RestartSetup"
+
+include ${infilepath}setup.in
+include ${infilepath}equilibrate.in
+jump SELF RunFragmentation
+
+label RestartSetup
+include ${infilepath}restartsetup.in
+
+label RunFragmentation
+include ${infilepath}deform.stepadj.nvt.in # Specify deformation file
+
+# SIMULATION DONE
+print "All done"
+
+# Simulation notes
+# Purpose:
+# Extreme strain rate, low temperature simulation for fragmentation in perfect crystal
+# Results:
+#
