@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.6
 
 """
-pmdwork_interface.py: Creates the gui for use with the pmdwork workflow program
+pyworkflow_gui.py: Creates the gui for use with the pmdwork workflow program
 """
 
 import pygtk
@@ -16,16 +16,18 @@ pya = PyAnalysis()
 
 class InputModule:
 
-    def __init__(self):
+    def __init__(self, container=None):
 
-        # TODO: Create a main window only if you haven't been passed a container to add to.
         # Main window
-        self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.window.set_title("pMDWork")
-        self.window.set_border_width(10)
+        if not container:
+            self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+            self.window.set_title("pMDWork")
+            self.window.set_border_width(10)
 
-        # Close event
-        self.window.connect("delete_event", self.delete_event)
+            # Close event
+            self.window.connect("delete_event", self.delete_event)
+        else:
+            self.window = container
 
         self.box = gtk.VBox(False, 0)
         self.window.add(self.box)
@@ -38,16 +40,16 @@ class InputModule:
 
     def setup_input_deck(self, container):
 
-        # * Input file section * #
+        # Input file section #
         bx_input = gtk.HBox(False, 0)
         container.pack_start(bx_input, False, False, 0)
 
-        # Label
+        # Input file label
         lab_input = gtk.Label("Input File:")
         bx_input.pack_start(lab_input, False)
         lab_input.show()
 
-        # Text box
+        # Input file entry box
         input_text = gtk.Entry()
         bx_input.pack_start(input_text)
         input_text.set_text("test.param")
@@ -56,6 +58,7 @@ class InputModule:
         # Open file button
         bt_open_input = gtk.Button()
         lab_bt_open = gtk.HBox(False, 2)
+        # Get stock image
         image = gtk.Image()
         image.set_from_stock(gtk.STOCK_OPEN, 4)
         image.show()
@@ -65,10 +68,12 @@ class InputModule:
         lab_bt_open.pack_start(label)
         lab_bt_open.show()
         bt_open_input.add(lab_bt_open)
-        bt_open_input.connect("clicked", self.callback_open_input, input_text)
         bt_open_input.show()
         bx_input.pack_start(bt_open_input, False, False)
         bx_input.show()
+
+        # Connect button to callback
+        bt_open_input.connect("clicked", self.callback_open_input, input_text)
     # end setup_input_deck
 
     def setup_parameter(self, container):
@@ -198,9 +203,9 @@ class InputModule:
         values = data[1].get_text()
         values = [float(val.strip('[]')) for val in values.split(',')]
         print values
-        if isinstance(pya.simulation_parameters[key],list):
+        if isinstance(pya.simulation_parameters[key], list):
             pya.simulation_parameters[key] += values
-        elif isinstance(pya.simulation_parameters[key],float) or isinstance(pya.simulation_parameters[key],int):
+        elif isinstance(pya.simulation_parameters[key], float) or isinstance(pya.simulation_parameters[key], int):
             pya.simulation_parameters[key] = [pya.simulation_parameters[key]] + values
         self.refresh_parameterlist()
     # end callback_add_values
@@ -214,16 +219,18 @@ class InputModule:
 
 class AnalysisModule:
 
-    def __init__(self):
+    def __init__(self, container=None):
 
-        # TODO: Create a main window only if you haven't been passed a container to add to.
         # Main window
-        self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.window.set_title("pMDWork")
-        self.window.set_border_width(10)
+        if not container:
+            self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+            self.window.set_title("pMDWork")
+            self.window.set_border_width(10)
 
-        # Close event
-        self.window.connect("delete_event", self.delete_event)
+            # Close event
+            self.window.connect("delete_event", self.delete_event)
+        else:
+            self.window = container
 
         self.box = gtk.VBox(False, 0)
         self.window.add(self.box)
@@ -336,11 +343,92 @@ class AnalysisModule:
 # end AnalysisModule
 
 
-class WorkflowGui(InputModule, AnalysisModule):
+class AnalysisStatus:
+
+    def __init__(self, container=None):
+
+        # Main window
+        if not container:
+            self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+            self.window.set_title("pMDWork")
+            self.window.set_border_width(10)
+
+            # Close event
+            self.window.connect("delete_event", self.delete_event)
+        else:
+            self.window = container
+
+        self.box = gtk.VBox(False, 0)
+        self.window.add(self.box)
+        self.setup_analysis_status(self.box)
+
+        self.box.show()
+        self.window.show()
+    # end __init__
+
+    def setup_analysis_status(self, container):
+
+        # Analysis status
+        analysis_status = gtk.Frame("Analysis Status")
+        container.pack_start(analysis_status)
+        analysis_label = gtk.Label("Name\tSystem\tCompletion\tETA\t\tWalltime\n" +
+                                   "Job1\t\tRaptor\t\t50\%\t0:01:00\t0:05:00")
+        analysis_status.add(analysis_label)
+        analysis_label.show()
+        analysis_status.show()
+    # end setup_analysis_status
+
+    def delete_event(self, widget, event, data=None):
+        gtk.main_quit()
+        return False
+    # end delete_event
+# end AnalysisStatus
+
+
+class SystemStatus:
+
+    def __init__(self, container=None):
+
+        # Main window
+        if not container:
+            self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+            self.window.set_title("pMDWork")
+            self.window.set_border_width(10)
+
+            # Close event
+            self.window.connect("delete_event", self.delete_event)
+        else:
+            self.window = container
+
+        self.box = gtk.VBox(False, 0)
+        self.window.add(self.box)
+        self.setup_system_status(self.box)
+
+        self.box.show()
+        self.window.show()
+    # end __init__
+
+    def setup_system_status(self, container):
+
+        # System status'
+        system_status = gtk.Frame("System Loads")
+        container.pack_start(system_status)
+        system_label = gtk.Label("Bars here with system loads")
+        system_status.add(system_label)
+        system_label.show()
+        system_status.show()
+    # end setup_system_status
+
+    def delete_event(self, widget, event, data=None):
+        gtk.main_quit()
+        return False
+    # end delete_event
+# end SystemStatus
+
+
+class WorkflowGui(InputModule, AnalysisModule, AnalysisStatus):
 
     def __init__(self):
-
-        # TODO: add calls to super constructors
 
         # ** Initialize analysis object ** #
         self.py_analysis = PyAnalysis('pmd_interface', input="test.param")
@@ -361,7 +449,12 @@ class WorkflowGui(InputModule, AnalysisModule):
         self.content_box.pack_start(self.status_box)
 
         # ** Start populating setup side of window ** #
+        # InputModule.__init__(self, self.setup_box)
+        print "Done with input"
+        # AnalysisModule.__init__(self, self.setup_box)
+        print "Done with analysis"
         self.setup()
+        print "Done with others"
 
         # ** Setup the status half of the window ** #
 
@@ -370,42 +463,16 @@ class WorkflowGui(InputModule, AnalysisModule):
         self.status_box.show()
         self.content_box.show()
         self.window.show()
+        print "Showed all"
     # end __init__
-
-    def setup_analysis_status(self):
-
-        # TODO: Move analysis status to new class
-
-        # Analysis status
-        analysis_status = gtk.Frame("Analysis Status")
-        self.status_box.pack_start(analysis_status)
-        analysis_label = gtk.Label("Name\tSystem\tCompletion\tETA\t\tWalltime\n" +
-                                   "Job1\t\tRaptor\t\t50\%\t0:01:00\t0:05:00")
-        analysis_status.add(analysis_label)
-        analysis_label.show()
-        analysis_status.show()
-    # end setup_analysis_status
-
-    def setup_system_status(self):
-
-        # TODO: move system status to new class
-
-        # System status'
-        system_status = gtk.Frame("System Loads")
-        self.status_box.pack_start(system_status)
-        system_label = gtk.Label("Bars here with system loads")
-        system_status.add(system_label)
-        system_label.show()
-        system_status.show()
-    # end setup_system_status
 
     def setup(self):
         self.setup_input_deck(self.setup_box)
         self.setup_parameter(self.setup_box)
         self.setup_analysis_name(self.setup_box)
         self.setup_doe(self.setup_box)
-        self.setup_analysis_status()
-        self.setup_system_status()
+        self.setup_analysis_status(self.status_box)
+        self.setup_system_status(self.status_box)
     # end setup
 
     def delete_event(self, widget, event, data=None):
