@@ -11,38 +11,21 @@ from design_of_experiments import FullOrthogonal
 import py_scheduler as sched
 
 
-class PyAnalysis:
+class PyWorkflow:
 
-    def __init__(self, name='Name', **kwargs):
-        """
-        PyAnalysis constructor
-        :param kwargs: Keyword argument options (default value): Description
-            input (None): str; Initial parameter file with variables defined
-            geometry (None): str or function handle; Geometry (atom position/mesh) file or function
-            variables (None): dict; variable names and values.
-            doe (None): dict; args to setup_design_of_experiments
-        :return: PyAnalysis object
-        """
+    def __init__(self):
 
-        self.name = name  # used for naming outputs
-        self.inputdeck = kwargs['input'] if 'input' in kwargs.keys() else None
-        self.geometry = kwargs['geometry'] if 'geometry' in kwargs.keys() else None
-        self.analysis_variables = kwargs['variables'] if 'variables' in kwargs.keys() else None
-        self.doe = None
+        self.name = 'Name'
+        self.input = None       # TODO: Should be an interface object
+        self.geometry = None
+        self.analysis = None
+        self.manager = None     # TODO: Define this
 
-        if 'doe' in kwargs.keys():
-            if self.analysis_variables is None:
-                warn("""To specify a design of experiments in the constructor,
-                        the analysis variables must also be specified through
-                        the variables key word argument. Nothing will be done.""")
-            else:
-                self.setup_design_of_experiments(**kwargs['doe'])
-
-        if 'input' in kwargs.keys():
-            self.simulation_parameters = parse_inputfile(self.inputdeck)
-        else:
-            self.simulation_parameters = None
+        self.parameters = None
+        self._active_parameters = None
     # end __init__
+
+    # *** Setting Functions *** #
 
     def set_name(self, name):
         self.name = name
@@ -55,10 +38,33 @@ class PyAnalysis:
         :return: None
         """
         if os.path.exists(filename):
-            self.simulation_parameters = parse_inputfile(filename)
+            self.parameters = parse_inputfile(filename)
+            self.set_study_parameters(self.parameters)
         else:
             warn("Filename: " + filename + " doesn't exist.")
     # end set_input
+
+    def set_geometry(self, geometry):
+        # I don't have a use for this in the current use-case, but should check it for being a function or filename
+        self.geometry = geometry
+    # end set_geometry
+
+    def set_analysis_method(self, doe=None, **kwargs):
+        """
+        Sets up the DoE of the specified type.
+        :param doe: str; type of DoE to setup
+        :param kwargs: dict; options to DoE type
+        :return: None
+        """
+
+        if 'variables' in kwargs.keys():
+            self.set_study_parameters(kwargs['variables'])
+
+        if doe.lower() == "orthogonal":
+            self.analysis = FullOrthogonal(self._active_parameters, **kwargs)
+        else:
+            raise Exception('Analysis type {} has not been created yet.'.format(doe))
+    # end set_analysis_method
 
     def set_study_parameters(self, parameters):
         """
@@ -66,8 +72,27 @@ class PyAnalysis:
         :param parameters: dict; parameter/value pairs. Values can be single values or lists of values.
         :return: None
         """
-        self.analysis_variables = parameters
+        self._active_parameters = parameters
+        # TODO: Make sure all active parameters are in self.parameters
     # end set_study_parameters
+
+    def set_parameter_value(self, parameter, value):
+        # TODO: Define method - change value of _active_parameter
+        pass
+    # end set_parameter_value
+
+    def remove_parameter(self, param_name):
+        if param_name in self._active_parameters.keys():
+            del(self._active_parameters[param_name])
+    # end remove_parameter
+
+    # *** Getter Functions *** #
+
+    def get_active_parameters(self):
+        return self._active_parameters
+    # end get_active_parameters
+
+    # *** Control functions *** #
 
     def start(self, **kwargs):
         """
@@ -79,16 +104,16 @@ class PyAnalysis:
 
         job_number = 0
         # TODO: the following algorithm only works for analysis types where all jobs are created up front.
-        while not self.doe.is_complete():
+        while not self.analysis.is_complete():
 
             job_name = '{}{}'.format(self.name, job_number)
             if not os.path.exists(job_name):
                 os.mkdir(job_name)
-            job_params = self.doe.next()
+            job_params = self.analysis.next()
             print "Writing to {}:".format(job_name)
             print "\t", job_params
             job_input = job_name + '.param'
-            write_inputfile(os.path.join(job_name, job_input), self.inputdeck, job_params)
+            write_inputfile(os.path.join(job_name, job_input), self.input, job_params)
 
             job_number += 1
 
@@ -97,38 +122,10 @@ class PyAnalysis:
             job = LammpsJob(job_name, job_input, localdir=os.path.join(os.getcwd(), job_name),
                             workdir='/scratch/bradley/' + job_name, **kwargs)
             os.system(job.run())
-            # my_scheduler.add_job(job)
+        # my_scheduler.add_job(job)
+
     # end start
-
-    def setup_design_of_experiments(self, doe=None, **kwargs):
-        """
-        Sets up the DoE of the specified type.
-        :param doe: str; type of DoE to setup
-        :param kwargs: dict; options to DoE type
-        :return: None
-        """
-
-        if 'variables' in kwargs.keys():
-            self.set_study_parameters(kwargs['variables'])
-
-        if self.analysis_variables is None:
-            self.analysis_variables = self.simulation_parameters
-            warn("Will default to using all of the simulation variables")
-            # raise Exception('First specify the analysis variables, or include the analysis variables'
-                             #' in the keyword argument "variables"')
-
-        if doe.lower() == "orthogonal":
-            self.doe = FullOrthogonal(self.analysis_variables, kwargs)
-        else:
-            raise Exception('Analysis type {} has not been created yet.'.format(doe))
-    # end setup_design_of_experiments
-
-    def remove_parameter(self, param_name):
-        if param_name in self.simulation_parameters.keys():
-            del(self.simulation_parameters[param_name])
-    # end remove_parameter
-
-# end PyAnalysis
+# end PyWorkflow
 
 
 class LammpsJob:
