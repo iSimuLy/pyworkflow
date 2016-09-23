@@ -1,5 +1,5 @@
 """
-design_of_experiments.py: Classes and wrapper for design of experiment methods
+analysis_methods.py: Classes and wrapper for analysis methods
 """
 
 import numpy as np
@@ -7,18 +7,32 @@ import numpy as np
 
 class FullOrthogonal:
 
-    def __init__(self, parameters, options=None):
+    options = ["order"]
+
+    def __init__(self, parameters=None, order=None):
         """
         FullOrthogonal constructor
         :param parameters: dict; parameter and values pairs
-        :param options: dict; for this method, only one option
-                order: specify the order to expand on parameters and specify parameter to be paired
+        :param order: specify the order to expand on parameters and specify parameter to be paired
         :return:
         """
 
-        order = options['order'] if options and ('order' in options.keys()) else []
+        if not parameters:
+            parameters = {}
+
+        if not order:
+            self.order = []
+
+        self.job_list = None
+        self.job_iter = None
+
+        self.create_analyses(parameters)
+    # end __init__
+
+    def create_analyses(self, parameters):
+
         ordered_names = []
-        for o in order:
+        for o in self.order:
             if isinstance(o, list):
                 ordered_names.extend(o)
             else:
@@ -26,10 +40,10 @@ class FullOrthogonal:
         param_names = parameters.keys()
         for pn in param_names:
             if pn not in ordered_names:
-                order.append(pn)
+                self.order.append(pn)
                 ordered_names.append(pn)
-        param_names = order
 
+        param_names = self.order
         job_form = [dict((i, None) for i in ordered_names)]
         for pn in param_names:
             new_jobs = []
@@ -46,7 +60,7 @@ class FullOrthogonal:
 
             for val in np.array(values).T:
                 for oj in job_form:
-                    if hasattr(pn,'__len__') and not isinstance(pn,str):
+                    if hasattr(pn, '__len__') and not isinstance(pn,str):
                         for i_pn, i_val in zip(pn,val):
                             oj.update({i_pn: i_val})
                     else:
@@ -55,7 +69,11 @@ class FullOrthogonal:
             job_form = new_jobs
         self.job_list = job_form
         self.job_iter = iter(job_form)
-    # end __init__
+    # end create_analyses
+
+    def set_options(self, **kwargs):
+        pass  # TODO: set order, then recreate analyses
+    # end set_options
 
     def next(self):
         """ Return the next job to be run """
@@ -63,11 +81,10 @@ class FullOrthogonal:
     # end next
 
     def is_complete(self):
-        if self.job_iter.__length_hint__() == 0:
-            return True
-        else:
-            return False
+        return self.job_iter.__length_hint__() == 0
     # end is_complete
 
     def get_options(self):
-        return ["order"]
+        return self.options
+    # end get_options
+# end FullOrthogonal

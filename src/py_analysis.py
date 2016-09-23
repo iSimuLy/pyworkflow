@@ -7,7 +7,7 @@ import os
 from warnings import warn
 from shutil import copy2
 from lammps_interface import parse_inputfile, write_inputfile
-from design_of_experiments import FullOrthogonal
+from analysis_methods import FullOrthogonal
 import py_scheduler as sched
 
 
@@ -93,7 +93,7 @@ class PyWorkflow:
     # end get_active_parameters
 
     # *** Control functions *** #
-
+    # TODO: rewrite function? Delegate work to scheduler?
     def start(self, **kwargs):
         """
         Starts running the experiments in the analysis.
@@ -122,9 +122,9 @@ class PyWorkflow:
             job = LammpsJob(job_name, job_input, localdir=os.path.join(os.getcwd(), job_name),
                             workdir='/scratch/bradley/' + job_name, **kwargs)
             os.system(job.run())
-        # my_scheduler.add_job(job)
 
-    # end start
+# end start
+
 # end PyWorkflow
 
 
